@@ -1,0 +1,51 @@
+name: Building Checker
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches-ignore: ["ga-ignore"]
+
+env:
+  EXECUTABLES: "MyGKrellm"
+
+jobs:
+  bulding_checker:
+    name: Building checker
+    runs-on: self-hosted
+    container:
+      image: epitechcontent/epitest-docker
+      options: --pull=missing
+
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+    
+      - name: Check make "all" rule
+        run: make
+
+      - name: Check make "clean" rule
+        run: make clean
+
+      - name: Check if the binary stays here
+        shell: bash
+        run: |
+          should_exit=0
+
+          for FILE in $EXECUTABLES; do
+            if [ -s "$FILE" ]; then
+              if [[ -f "$FILE" && -x "$FILE" ]]; then
+                echo "::notice $FILE has been found and is executable"
+              else
+                echo "::error $FILE has been found but is not executable"
+                should_exit=1
+              fi
+            else
+              echo "::error title=Executable not found,file=${FILE}::Please ensure your file has been compiled"
+              echo $(ls)
+              should_exit=1
+            fi
+          done
+          if [ "$should_exit" = 1 ]; then
+            exit 1
+          fi
